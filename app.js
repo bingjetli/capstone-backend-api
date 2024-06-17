@@ -57,11 +57,14 @@ app.get('/api/reservations/fetch/all', async (req, res) => {
 //parameters.
 //  @param startDate : (int) unix timestamp to pass into the Date contructor.
 //  @param endDate : (int) see above.
+//  @param
 //  @returns : { reservations: array }
 app.get('/api/reservations/fetch', async (req, res) => {
     const start_date = req.query.startDate;
     const end_date = req.query.endDate;
-    const query_filter = {};
+    const query_filter = {
+        status: 'reserved',
+    };
 
     if (start_date) {
         //Validate that the value passed into start_date is an integer.
