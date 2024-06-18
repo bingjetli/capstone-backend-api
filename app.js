@@ -135,6 +135,47 @@ app.post('/api/reservations/create', async (req, res) => {
     }
 });
 
+//Makes a request to the database in order to create a new Reservation.
+//  @param {...} : application/json payload matching the Reservation Schema.
+//  @returns : 201 Created on success, 400 Bad Request otherwise.
+app.post('/api/reservations/request', async (req, res) => {
+    //Wrap this in a try-catch block to avoid crashing the server with
+    //invalid json formats.
+    try {
+        //First verify that the POST request has either a email or phone number
+        //specified as at least 1 is required.
+        if (!req.body.email && !req.body.phoneNumber) {
+            //If both of these fields are falsy (neither one was specified
+            //the request), then return 400 : Bad Request.
+            return res.status(400).json({
+                message: 'No email or phone number included in the request...',
+            });
+        }
+
+        //Create the Reservation if it passes validation and return a 201
+        //on successful creation.
+        await Reservation.create({
+            firstName: req.body.firstName,
+            lastName: req.body.lastName,
+            email: req.body.email,
+            phoneNumber: req.body.phoneNumber,
+            date: req.body.date,
+            notes: req.body.notes,
+            seats: req.body.seats,
+            status: 'requires-approval',
+        });
+        return res.status(201).json({
+            message: 'Reservation requested',
+        });
+    } catch (error) {
+        console.log('DEBUG: Error encountered while creating the model...');
+        console.log(error);
+        return res.status(400).json({
+            message: error.message,
+        });
+    }
+});
+
 //Makes a request to the database in order to update the firstname of
 //the reservation entry.
 //Expects an application/json with the following fields (@params) :
@@ -681,13 +722,12 @@ const generateSampleReservations = () => {
             firstName: faker.person.firstName(),
             lastName: faker.person.lastName(),
             email: faker.internet.email(),
-            phoneNumber: faker.phone.number(),
-            date: faker.date.soon({ days: 7 }),
-            startTime: `${start_heure}:${start_minutes}`,
-            endTime: `${end_heure}:${end_minutes}`,
+            phoneNumber: '00000000000',
+            date: faker.date.soon({ days: 14 }),
             notes: faker.lorem.sentence(),
             tableId: Math.trunc(Math.random() * 10),
-            status: 'active',
+            seats: Math.trunc(Math.random() * 10),
+            status: 'reserved',
         });
     }
 
