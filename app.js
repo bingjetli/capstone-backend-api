@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 import mongoose, { mongo } from 'mongoose';
 import Reservation from './model/Reservation.js';
 import { faker } from '@faker-js/faker';
+import Blacklist from './model/Blacklist.js';
 
 //Load the .env file
 dotenv.config();
@@ -694,6 +695,207 @@ app.post('/api/reservations/delete', async (req, res) => {
     } catch (error) {
         console.log(
             'DEBUG: Error encountered while deleting the reservation...'
+        );
+        console.log(error);
+        return res.status(400).json({
+            message: error.message,
+        });
+    }
+});
+
+app.get('/api/blacklist/fetch/all', async (req, res) => {
+    const all_items = await Blacklist.find({}).exec();
+
+    if (all_items.length > 0) {
+        //If there are items, return them (200 OK)
+        res.status(200).json({
+            message: 'Retreived all blacklisted entries in the database.',
+            blacklistEntries: all_items,
+        });
+    } else {
+        //Otherwise, indicate that there is nothing to return (204 No Content)
+        res.status(204).json({
+            message: 'There is nothing in the database',
+        });
+    }
+});
+
+app.get('/api/blacklist/fetch', async (req, res) => {
+    const phoneNumber = req.query['phone-number'];
+    const email = req.query['email'];
+    const date_blacklisted = req.query['date-blacklisted'];
+
+    const query_filter = {};
+
+    if (phoneNumber) {
+        query_filter.phoneNumber = phoneNumber;
+    }
+
+    if (email) {
+        query_filter.email = email;
+    }
+
+    if (date_blacklisted) {
+        query_filter.dateBlacklisted = date_blacklisted;
+    }
+
+    console.log('DEBUG: Received query filter : ');
+    console.log(query_filter);
+
+    const results = await Blacklist.find(query_filter).exec();
+    return res.status(200).json({
+        message: `Found ${results.length} items matching this query.`,
+        blacklistEntries: results,
+    });
+});
+
+app.post('/api/blacklist/create', async (req, res) => {
+    //Wrap this in a try-catch block to avoid crashing the server with
+    //invalid json formats.
+    try {
+        //First verify that the POST request has either a email or phone number
+        //specified as at least 1 is required.
+        if (!req.body.email && !req.body.phoneNumber) {
+            //If both of these fields are falsy (neither one was specified
+            //the request), then return 400 : Bad Request.
+            return res.status(400).json({
+                message: 'No email or phone number included in the request...',
+            });
+        }
+
+        //Create the item if it passes validation and return a 201
+        //on successful creation.
+        await Blacklist.create(req.body);
+        return res.status(201).json({
+            message: 'Blacklist entry created successfully',
+        });
+    } catch (error) {
+        console.log('DEBUG: Error encountered while creating the model...');
+        console.log(error);
+        return res.status(400).json({
+            message: error.message,
+        });
+    }
+});
+
+app.post('/api/blacklist/update/email', async (req, res) => {
+    try {
+        //First validate that the post payload contains the proper fields.
+        if (!req.body.id) {
+            return res.status(400).json({
+                message:
+                    "The 'id' field is missing from the POST body payload. ",
+            });
+        }
+        if (!req.body['email']) {
+            return res.status(400).json({
+                message:
+                    "The 'email' field is missing from the POST body payload. ",
+            });
+        }
+
+        //Then attempt to perform the update query.
+        const result = await Blacklist.findByIdAndUpdate(
+            req.body.id,
+            {
+                email: req.body['email'],
+            },
+            { runValidators: true }
+        ).exec();
+
+        if (result === null) {
+            //The item is not found, so there is nothing to update.
+            return res.status(404).json({
+                message:
+                    "Unable to update a blacklist entry that doesn't exist.",
+            });
+        }
+
+        return res.status(200).json({
+            message: 'The update was successful!',
+        });
+    } catch (error) {
+        console.log(
+            'DEBUG: Error encountered while updating the blacklist entry...'
+        );
+        console.log(error);
+        return res.status(400).json({
+            message: error.message,
+        });
+    }
+});
+
+app.post('/api/blacklist/update/phoneNumber', async (req, res) => {
+    try {
+        //First validate that the post payload contains the proper fields.
+        if (!req.body.id) {
+            return res.status(400).json({
+                message:
+                    "The 'id' field is missing from the POST body payload. ",
+            });
+        }
+        if (!req.body['phoneNumber']) {
+            return res.status(400).json({
+                message:
+                    "The 'phoneNumber' field is missing from the POST body payload. ",
+            });
+        }
+
+        //Then attempt to perform the update query.
+        const result = await Blacklist.findByIdAndUpdate(
+            req.body.id,
+            {
+                phoneNumber: req.body['phoneNumber'],
+            },
+            { runValidators: true }
+        ).exec();
+
+        if (result === null) {
+            //The item is not found, so there is nothing to update.
+            return res.status(404).json({
+                message:
+                    "Unable to update a blacklist entry that doesn't exist.",
+            });
+        }
+
+        return res.status(200).json({
+            message: 'The update was successful!',
+        });
+    } catch (error) {
+        console.log(
+            'DEBUG: Error encountered while updating the blacklist entry...'
+        );
+        console.log(error);
+        return res.status(400).json({
+            message: error.message,
+        });
+    }
+});
+
+app.post('/api/blacklist/delete', async (req, res) => {
+    try {
+        //First validate that the post payload contains the proper fields.
+        if (!req.body.id) {
+            return res.status(400).json({
+                message:
+                    "The 'id' field is missing from the POST body payload. ",
+            });
+        }
+
+        //Then attempt to perform the delete query.
+        const result = await Blacklist.findByIdAndDelete(req.body.id).exec();
+        if (result === null) {
+            return res.status(404).json({
+                message: `There was no blacklist entry with this id: ${req.body.id} found in the database.`,
+            });
+        }
+
+        return res.status(200).json({
+            message: 'Blacklist entry deleted',
+        });
+    } catch (error) {
+        console.log(
+            'DEBUG: Error encountered while deleting the blacklist entry...'
         );
         console.log(error);
         return res.status(400).json({

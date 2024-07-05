@@ -56,7 +56,7 @@ const reservation_schema = new Schema({
     },
     notes: {
         type: String,
-        maxLength: 255,
+        maxLength: 128,
     },
 });
 
