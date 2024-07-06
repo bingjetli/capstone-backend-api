@@ -121,6 +121,28 @@ app.post('/api/reservations/create', async (req, res) => {
             });
         }
 
+        //Next, we need to check to see if the email or phone number
+        //exists in the blacklist.
+        let blacklist_entry = null;
+        if (req.body.email) {
+            blacklist_entry = await Blacklist.findOne({
+                email: req.body.email,
+            }).exec();
+        }
+        if (req.body.phoneNumber) {
+            blacklist_entry = await Blacklist.findOne({
+                phoneNumber: req.body.phoneNumber,
+            }).exec();
+        }
+        if (blacklist_entry) {
+            //If this is truthy, then there must be a blacklist entry
+            //containing either the email or the phone number.
+            return res.status(400).json({
+                message:
+                    'The email or phone number associated with this reservation is blacklisted.',
+            });
+        }
+
         //Create the Reservation if it passes validation and return a 201
         //on successful creation.
         await Reservation.create(req.body);
@@ -763,7 +785,27 @@ app.post('/api/blacklist/create', async (req, res) => {
             });
         }
 
-        //Create the item if it passes validation and return a 201
+        //Now we need to check to see if the email or phone number provided
+        //already exists in the blacklist or not.
+        let existing_entry = null;
+        if (req.body.email) {
+            existing_entry = await Blacklist.findOne({
+                email: req.body.email,
+            }).exec();
+        } else if (req.body.phoneNumber) {
+            existing_entry = await Blacklist.findOne({
+                phoneNumber: req.body.phoneNumber,
+            }).exec();
+        }
+        if (existing_entry) {
+            //Existing entry is truthy, therefore the entry probably
+            //exists in the blacklist already.
+            return res.status(400).json({
+                message: 'The entry exists in the blacklist already.',
+            });
+        }
+
+        //Otherwise, create the item if it passes validation and return a 201
         //on successful creation.
         await Blacklist.create(req.body);
         return res.status(201).json({
